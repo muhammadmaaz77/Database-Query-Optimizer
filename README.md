@@ -1,149 +1,391 @@
-# Educational ADBMS Query Optimizer Simulator
+# 🗃️ Database Query Optimizer Simulator
 
-A production-ready Advanced Database Management Systems (ADBMS) query optimization simulator. This educational simulator demonstrates logical query optimization rewrites, physical execution plan generation, cost-based planning, schema statistics, and query execution analytics using a real SQLite backend.
-
-Designed for university coursework, laboratory demonstrations, and ADBMS viva examinations.
+> A full-stack, educational web application that visually demonstrates how a relational database engine parses, rewrites, optimizes, and executes SQL queries — step by step.
 
 ---
 
-## 🚀 Key Educational Features
+## 📌 Overview
 
-### 1. Logical Query Optimization Rules
-The optimizer implements three major logical optimization rules to rewrite the parsed query's Relational Algebra representation before physical planning:
-* **Selection Pushdown**: Pushes `WHERE` predicates down past relational `Join` operators close to the base `Relation` scans, reducing intermediate tuple counts early.
-* **Projection Pushdown**: Removes unused table attributes as early as possible. Prunes scanned columns to match only the projected, filter, and join columns, saving memory and I/O bus overhead.
-* **Join Reordering**: Evaluates permutations of multi-join sequences (e.g. `A JOIN B JOIN C`), estimates logical tree costs, and reorders joins (placing smaller/cheaper joins first) to minimize intermediate cartesian or matching spaces.
+The **Database Query Optimizer Simulator** is a Python/Flask web application that simulates the internal query processing pipeline of a relational database management system (RDBMS). It is designed to make abstract database theory tangible and interactive.
 
-### 2. Physical Plan Generator & Cost-Based Optimizer (CBO)
-Translates the logical Relational Algebra nodes into concrete physical operators. It generates **three alternative execution plans** for comparison:
-* **Plan A (Baseline)**: Sequential Scan + Nested Loop Join (classical cross-product-based fallback).
-* **Plan B (Hash Join Optimized)**: Index Scan (simulated) + Hash Join (highly efficient for large, unsorted datasets).
-* **Plan C (Sort Merge Join)**: Index Scan (simulated) + Sort Merge Join (ideal when inputs are pre-sorted or indexed).
+Given a SQL `SELECT` query, the simulator:
 
-It calculates physical costs using database statistics:
-* **Sequential Scan Cost** = `row_count` (I/O) + `row_count * 0.01` (CPU)
-* **Index Scan Cost** = `log2(row_count)` (I/O) + `log2(row_count) * 0.1` (CPU)
-* **Nested Loop Join Cost** = `outer_io` + `outer_rows * inner_io` + CPU evaluation
-* **Hash Join Cost** = `left_io` + `right_io` + `(left_rows + right_rows) * 1.5` (CPU)
-* **Sort Merge Join Cost** = `left_io` + `right_io` + `sort_cost` + `merge_cost`
-
-### 3. Optimization Explanation Engine
-Generates human-readable, educational explanation logs explaining the optimizer's decisions step-by-step (e.g. why selections were pushed, which join reordering was preferred, cost metrics before vs. after, and why the best physical plan was selected).
-
-### 4. Side-by-Side Comparison Dashboard
-Includes an optimization analytics panel showcasing the unoptimized logical tree vs. the optimized logical tree side-by-side, cost reduction percentages, and the exact physical plan cost matrix comparison with CSS bar charts.
-
-### 5. Session Query History
-Stores executed queries in local session storage, displaying the query string, timestamp, selected best plan, and total estimated cost. Clicking "Load Query" restores the query in the editor and re-runs it instantly.
-
-### 6. Database Statistics Explorer
-Provides a statistics dashboard showing the active database metrics (table row counts, number of tables, simulated indexed attributes, and total seeded records) dynamically read from the database.
-
-### 7. Educational Guide
-A complete built-in help guide explaining sequential scans, index scans, join types (Nested Loop, Hash, Sort Merge), rewrite rules, and cost-based optimization formulas in student-friendly summaries.
+1. **Parses** the SQL into a structured AST representation
+2. **Builds** a Logical Relational Algebra Tree
+3. **Optimizes** the logical tree using rule-based rewriting
+4. **Generates** three alternative Physical Execution Plans
+5. **Estimates** CPU and I/O costs for each plan
+6. **Selects** the best plan using cost-based comparison
+7. **Executes** the query against a real SQLite database
+8. **Visualizes** every step in a rich, interactive dashboard
 
 ---
 
-## 🏛️ Database Schema
+## ✨ Features
 
-The database `university.db` consists of 4 main tables:
-1. **`Department`** (`id` INTEGER PRIMARY KEY, `name` TEXT UNIQUE)
-2. **`Teacher`** (`id` INTEGER PRIMARY KEY, `name` TEXT, `dept_id` REFERENCES Department)
-3. **`Course`** (`id` INTEGER PRIMARY KEY, `name` TEXT, `teacher_id` REFERENCES Teacher)
-4. **`Student`** (`id` INTEGER PRIMARY KEY, `name` TEXT, `dept_id` REFERENCES Department, `cgpa` REAL)
-
-The database is pre-seeded with **10 departments, 100 teachers, 200 courses, and 5,000 students** using `fake_data.py` (which runs automatically on app startup).
+| Feature | Description |
+|---|---|
+| **Custom SQL Parser** | Handwritten tokenizer and parser — no external SQL libraries |
+| **Schema Validation** | Validates all tables and columns against the live database schema |
+| **Relational Algebra Tree** | Builds a logical plan tree (Projection → Selection → Join → Relation) |
+| **Rule-Based Optimization** | Applies Join Reordering, Selection Pushdown, and Projection Pushdown |
+| **Physical Plan Generation** | Generates 3 alternative physical plans (A, B, C) with different operators |
+| **Cost Estimation** | Models CPU + I/O cost formulas for Seq Scan, Index Scan, NLJ, Hash Join, SMJ |
+| **Before vs After Comparison** | Side-by-side comparison of unoptimized vs optimized plan trees and costs |
+| **Real Query Execution** | Executes the query on SQLite and returns actual result rows |
+| **Auto Data Generation** | Populates a university database (5,000 students, 100 teachers, 200 courses) |
+| **REST API** | Full JSON API for schema, execution, and statistics |
 
 ---
 
-## 📂 Folder Structure
+## 🏗️ Architecture
 
-```text
-Query Optimizer/
-│
-├── app.py                  # Flask backend & REST API endpoints (/api/execute, /api/statistics)
-├── config.py               # Database paths and environment configuration
-├── database.py             # SQLite helper and schema fetcher
-├── parser.py               # SQL parsing engine mapping query into abstract components AST
-├── algebra_tree.py         # Relational Algebra logical tree structures
-├── optimizer.py            # Rule-Based & Cost-Based logical optimizer (Join Reorder, Pushdowns)
-├── cost_estimator.py       # CPU/IO cost models for physical and logical plans
-├── execution_plans.py      # Translates logical trees into physical Plan A, B, and C
-├── fake_data.py            # SQLite data generator creating 5000+ records via Faker
-├── requirements.txt        # Python dependency lists
-│
-├── templates/
-│      └── index.html       # Web dashboard with tabular controls
-│
-├── static/
-│      ├── style.css        # Theme, layout styling, node visualizer, CSS bar charts
-│      └── script.js        # Ajax requests, history storage, tabs, and plan rendering
-│
-└── README.md               # Project documentation
+```
+┌─────────────────────────────────────────────────────┐
+│                    Flask Web Server                 │
+│                       app.py                        │
+└────────────────────────┬────────────────────────────┘
+                         │
+         ┌───────────────┼───────────────────┐
+         ▼               ▼                   ▼
+   ┌──────────┐   ┌─────────────┐    ┌─────────────┐
+   │  parser  │   │ algebra_tree│    │  database   │
+   │  .py     │   │ .py         │    │  .py        │
+   └──────────┘   └─────────────┘    └─────────────┘
+         │               │
+         ▼               ▼
+   ┌──────────┐   ┌──────────────┐
+   │optimizer │──▶│execution_    │
+   │  .py     │   │plans.py      │
+   └──────────┘   └──────────────┘
+         │
+         ▼
+   ┌──────────────────┐    ┌───────────────────┐
+   │ cost_estimator   │◀───│ statistics_manager│
+   │ .py              │    │ .py               │
+   └──────────────────┘    └───────────────────┘
+```
+
+### Module Responsibilities
+
+| Module | Role |
+|---|---|
+| [`app.py`](app.py) | Flask application, routes, startup initialization |
+| [`parser.py`](parser.py) | Custom SQL tokenizer, recursive-descent parser, schema validator |
+| [`algebra_tree.py`](algebra_tree.py) | `AlgebraNode` class, logical tree builder |
+| [`optimizer.py`](optimizer.py) | `QueryOptimizer` — Join Reordering, Selection Pushdown, Projection Pushdown |
+| [`execution_plans.py`](execution_plans.py) | `PhysicalPlanNode`, 3 physical plan generators (NLJ, Hash Join, SMJ) |
+| [`cost_estimator.py`](cost_estimator.py) | `CostEstimator` — CPU/I/O formula engine for all physical operators |
+| [`statistics_manager.py`](statistics_manager.py) | `DBStatistics` — live table row counts, selectivity & cardinality estimates |
+| [`database.py`](database.py) | SQLite connection, schema creation, query execution |
+| [`config.py`](config.py) | Configuration (DB path, secret key, debug flag) |
+| [`fake_data.py`](fake_data.py) | Faker-based seed data generator for the university database |
+
+---
+
+## 🗄️ Database Schema
+
+The application uses a simulated **university database** with 4 tables:
+
+```sql
+Department (id, name)
+Teacher    (id, name, dept_id → Department.id)
+Course     (id, name, teacher_id → Teacher.id)
+Student    (id, name, dept_id → Department.id, cgpa)
+```
+
+**Seeded data:**
+- 10 Departments
+- 100 Teachers
+- 200 Courses
+- 5,000 Students
+
+The database is auto-created and populated on the first server startup. No manual setup is required.
+
+---
+
+## ⚙️ Query Processing Pipeline
+
+For every submitted SQL query, the following pipeline executes:
+
+```
+SQL String
+    │
+    ▼
+[1] Tokenize + Parse  ──── SQLParser.parse()
+    │  → Structured AST dict (tables, joins, WHERE, SELECT)
+    │
+    ▼
+[2] Schema Validation ──── validate_schema()
+    │  → Verifies all table & column names against live schema
+    │
+    ▼
+[3] Logical Plan      ──── build_initial_tree()
+    │  → AlgebraNode tree: Projection → Selection → Join(s) → Relation(s)
+    │
+    ▼
+[4] Optimization      ──── QueryOptimizer.optimize()
+    │  → Rule 1: Join Reordering (cost-based swap)
+    │  → Rule 2: Selection Pushdown (filter → base relations)
+    │  → Rule 3: Projection Pushdown (prune column sets)
+    │
+    ▼
+[5] Physical Planning ──── generate_alternative_plans()
+    │  → Plan A: Seq Scan + Nested Loop Join
+    │  → Plan B: Index Scan + Hash Join
+    │  → Plan C: Index Scan + Sort Merge Join
+    │
+    ▼
+[6] Cost Estimation   ──── CostEstimator.calculate_and_populate_tree()
+    │  → CPU + I/O costs per node, ranked by total cost
+    │
+    ▼
+[7] Best Plan Selection
+    │  → Lowest total cost plan selected; why_selected rationale generated
+    │
+    ▼
+[8] SQL Execution     ──── execute_query()
+    │  → Real SQLite execution, up to 100 result rows returned
+    │
+    ▼
+JSON Response → Frontend Dashboard
 ```
 
 ---
 
-## 🏁 Installation & Running Instructions
+## 💡 Optimization Rules
 
-### 1. Prerequisites
-Install Python 3.8 or higher.
+### Rule 1 — Join Reordering
+Evaluates two join orderings and selects the one with the lower estimated cost:
+- `BaseTable ⋈ Table1 ⋈ Table2`  vs  `BaseTable ⋈ Table2 ⋈ Table1`
 
-### 2. Install Dependencies
+### Rule 2 — Selection Pushdown (σ-pushdown)
+Moves `WHERE` filter conditions as close to the base relation as possible, reducing the number of rows that travel up through join operators.
+
+### Rule 3 — Projection Pushdown (π-pushdown)
+Prunes unnecessary columns from each table's scanned column set, reducing I/O and intermediate data width.
+
+---
+
+## 📐 Cost Model
+
+Each physical operator has a defined cost formula:
+
+| Operator | I/O Cost | CPU Cost |
+|---|---|---|
+| **Sequential Scan** | `N` (rows) | `N × 0.01` |
+| **Index Scan** | `log₂(N)` | `log₂(N) × 0.1` |
+| **Filter** | inherited | `child_rows × 0.1` |
+| **Nested Loop Join** | `I/O_left + (rows_left × I/O_right)` | `rows_left × rows_right × 0.05` |
+| **Hash Join** | `I/O_left + I/O_right` | `(rows_left + rows_right) × 1.5` |
+| **Sort Merge Join** | `I/O_left + I/O_right` | sort cost + `(rows_left + rows_right) × 0.1` |
+| **Projection** | inherited | `child_rows × 0.05` |
+
+---
+
+## 🌐 REST API
+
+### `GET /`
+Renders the main dashboard with the database schema loaded.
+
+### `GET /api/schema`
+Returns the full database schema as JSON.
+
+```json
+{
+  "Student": [{"name": "id", "type": "INTEGER", ...}, ...],
+  "Department": [...],
+  ...
+}
+```
+
+### `POST /api/execute`
+Main query processing endpoint. Accepts a SQL string and returns the full pipeline result.
+
+**Request:**
+```json
+{ "query": "SELECT Student.name, Department.name FROM Student JOIN Department ON Student.dept_id = Department.id WHERE Student.cgpa > 3.5" }
+```
+
+**Response fields:**
+
+| Field | Description |
+|---|---|
+| `parsed_query` | Structured AST from the SQL parser |
+| `algebra_tree` | Logical relational algebra tree (JSON) |
+| `physical_plans` | All 3 physical plan trees with costs |
+| `cost_analysis` | Per-plan cost breakdown (CPU, I/O, total, rank) |
+| `best_plan` | Selected plan with rationale |
+| `before_optimization` | Unoptimized logical tree and plans |
+| `after_optimization` | Optimized logical tree and plans |
+| `cost_reduction_pct` | Percentage cost improvement from optimization |
+| `optimization_explanations` | Step-by-step explanation of each rewrite |
+| `execution_result` | Actual query result rows (up to 100) |
+| `execution_time_ms` | Real SQLite execution time in milliseconds |
+
+### `GET /api/statistics`
+Returns live database statistics.
+
+```json
+{
+  "num_tables": 4,
+  "total_records": 5310,
+  "table_counts": {"Student": 5000, "Department": 10, ...},
+  "indexed_columns": {"Student": ["id"], ...}
+}
+```
+
+---
+
+## 🧪 Supported SQL Syntax
+
+The custom parser supports:
+
+```sql
+-- Simple SELECT
+SELECT * FROM Student
+
+-- Column list
+SELECT Student.name, Department.name FROM Student
+
+-- INNER JOIN
+SELECT * FROM Student INNER JOIN Department ON Student.dept_id = Department.id
+
+-- LEFT / RIGHT JOIN
+SELECT * FROM Student LEFT JOIN Department ON Student.dept_id = Department.id
+
+-- WHERE with single condition
+SELECT * FROM Student WHERE Student.cgpa > 3.5
+
+-- WHERE with AND / OR
+SELECT Student.name FROM Student
+  JOIN Department ON Student.dept_id = Department.id
+  WHERE Student.cgpa >= 3.0 AND Department.id > 2
+
+-- Multiple JOINs
+SELECT Student.name, Department.name, Teacher.name
+  FROM Student
+  JOIN Department ON Student.dept_id = Department.id
+  JOIN Teacher ON Teacher.dept_id = Department.id
+  WHERE Student.cgpa > 3.5
+
+-- With semicolon
+SELECT * FROM Student WHERE cgpa = 4.0;
+```
+
+**Operators supported in WHERE:** `=`, `<`, `>`, `<=`, `>=`, `!=`, `<>`
+
+---
+
+## 🚀 Local Setup
+
+### Prerequisites
+- Python 3.10+
+- pip
+
+### Install & Run
+
 ```bash
+# 1. Clone the repository
+git clone https://github.com/muhammadmaaz77/Database-Query-Optimizer.git
+cd Database-Query-Optimizer
+
+# 2. Install dependencies
 pip install -r requirements.txt
-```
 
-### 3. Start the Application
-```bash
+# 3. Run the development server
 python app.py
 ```
-*(Launching `app.py` will automatically initialize `university.db` and generate 5,000+ fake records if they don't exist yet).*
 
-### 4. View in Browser
-Open your browser and navigate to:
-**`http://127.0.0.1:5000`**
+The app will be available at **http://127.0.0.1:5000**
 
----
-
-## 🧪 Sample SQL Queries to Try
-
-1. **Selection Pushdown Demonstration**:
-   ```sql
-   SELECT Student.name, Department.name
-   FROM Student
-   JOIN Department ON Student.dept_id = Department.id
-   WHERE Student.cgpa > 3.8
-   ```
-   *Observe how the Selection is pushed down directly to the `Student` scan in the optimized tree.*
-
-2. **Join Reordering & Multi-Join**:
-   ```sql
-   SELECT Student.name, Department.name, Teacher.name
-   FROM Student
-   JOIN Department ON Student.dept_id = Department.id
-   JOIN Teacher ON Teacher.dept_id = Department.id
-   WHERE Student.cgpa > 3.9
-   ```
-   *Observe how the optimizer evaluates different join orders to minimize the cost of intermediate relations.*
-
-3. **Projection Pruning**:
-   ```sql
-   SELECT Student.cgpa
-   FROM Student
-   WHERE Student.id > 100
-   ```
-   *Observe how projection pushdown prunes the scanned attributes to only `cgpa` and `id` instead of fetching all columns.*
+> The database is created and seeded automatically on first startup. No additional configuration is needed.
 
 ---
 
-## 📷 Screenshots Section Placeholder
-![Dashboard Interface](file:///C:/Users/Soul/.gemini/antigravity-cli/brain/c1e9869c-b4a9-4f1a-8192-d037e83dee3b/scratch/dashboard_mockup.png)
-*(Place dashboard screenshots here during viva preparation)*
+## ☁️ Deployment on Render
+
+This project is configured for one-click deployment on [Render](https://render.com).
+
+### Configuration Files
+
+| File | Contents |
+|---|---|
+| [`Procfile`](Procfile) | `web: gunicorn app:app` |
+| [`requirements.txt`](requirements.txt) | Minimal 9-package dependency list |
+
+### Deploy Steps
+
+1. Push the repository to GitHub
+2. Create a new **Web Service** on Render
+3. Connect your GitHub repository
+4. Render auto-detects `Procfile` and runs `gunicorn app:app`
+
+### Environment Variables (Optional)
+
+| Variable | Default | Description |
+|---|---|---|
+| `SECRET_KEY` | `query-optimizer-simulator-secret-key` | Flask session secret |
+| `FLASK_DEBUG` | `False` | Set to `true` for debug mode |
+
+> **Note:** Render uses an ephemeral filesystem. The SQLite database is re-created and re-seeded automatically on every deploy — this is by design for a simulator application.
 
 ---
 
-## 🔮 Future Improvements
-* **Dynamic Indexing**: Allow users to click to add or drop indexes on tables and see the access path costs change in real-time.
-* **Join Selectivity Enhancements**: Integrate histogram-based statistical summaries instead of basic selectivities.
-* **Query Editor Autocomplete**: Add SQL keywords and column suggestions in the code input area.
+## 📁 Project Structure
+
+```
+Query Optimizer/
+├── app.py                  # Flask app, routes, startup
+├── parser.py               # Custom SQL tokenizer & parser
+├── algebra_tree.py         # Logical plan tree (AlgebraNode)
+├── optimizer.py            # Rule-based + cost-based optimizer
+├── execution_plans.py      # Physical plan generator & nodes
+├── cost_estimator.py       # CPU/I/O cost formulas
+├── statistics_manager.py   # Table statistics & cardinality
+├── database.py             # SQLite connection & schema
+├── config.py               # App configuration
+├── fake_data.py            # Faker-based data seeder
+├── test_integration.py     # Integration test suite
+├── templates/
+│   └── index.html          # Main dashboard (single-page app)
+├── static/
+│   ├── style.css           # Dashboard styles
+│   └── script.js           # Frontend logic & visualizations
+├── data/
+│   └── university.db       # SQLite database (auto-created)
+├── Procfile                # Render deployment config
+├── requirements.txt        # Python dependencies
+└── README.md               # This file
+```
+
+---
+
+## 🧰 Tech Stack
+
+| Layer | Technology |
+|---|---|
+| **Backend** | Python 3, Flask 3 |
+| **Database** | SQLite 3 (via Python stdlib) |
+| **WSGI Server** | Gunicorn |
+| **Test Data** | Faker |
+| **Frontend** | HTML, Vanilla CSS, Vanilla JavaScript |
+| **Deployment** | Render |
+
+---
+
+## 🧪 Running Tests
+
+```bash
+python -m pytest test_integration.py -v
+```
+
+---
+
+## 📄 License
+
+This project is developed for educational purposes as a Database Systems course project.
+
+---
+
+*Built with 🔬 for learning how database query optimizers work under the hood.*
