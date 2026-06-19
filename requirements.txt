@@ -1,2 +1,13 @@
-Flask>=3.0.0
-Faker>=19.0.0
+# Query Optimizer Simulator — minimal requirements for Render deployment
+# Direct dependencies (actually imported by the project)
+Flask==3.1.2
+Faker==40.23.0
+gunicorn==26.0.0
+
+# Flask transitive dependencies (required at runtime)
+Werkzeug==3.1.5
+Jinja2==3.1.6
+MarkupSafe==3.0.2
+click==8.2.0
+itsdangerous==2.2.0
+blinker==1.9.0
