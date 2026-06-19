@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Query Optimizer Simulator</title>
+    <!-- Modern Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Outfit:wght@400;500;600;700;800&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome for Premium Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- CSS stylesheet -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=3">
+</head>
+<body class="dark-grey">
+    <!-- Glassmorphism Animated Background Blobs -->
+    <div class="background-decorations">
+        <div class="blur-blob blob-zinc"></div>
+        <div class="blur-blob blob-coal"></div>
+        <div class="blur-blob blob-graphite"></div>
+    </div>
+
+    <div class="app-container">
+        <!-- Sidebar: Schema Explorer -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="brand">
+                    <i class="fa-solid fa-database brand-icon-db"></i>
+                    <span>University DB</span>
+                </div>
+                <span class="badge badge-conn">SQLite</span>
+            </div>
+            
+            <div class="schema-section">
+                <h3><i class="fa-solid fa-folder-tree"></i> Schema Explorer</h3>
+                <p class="schema-desc">Click attributes to insert them into the SQL editor.</p>
+                <div class="schema-list" id="schemaList">
+                    <!-- Schema tables will be dynamically rendered here -->
+                    {% for table, columns in schema.items() %}
+                    <div class="table-card">
+                        <div class="table-card-header">
+                            <i class="fa-solid fa-table"></i>
+                            <span class="table-name">{{ table }}</span>
+                        </div>
+                        <ul class="column-list">
+                            {% for col in columns %}
+                            <li class="column-item" data-table="{{ table }}" data-column="{{ col.name }}">
+                                <span class="col-name">{{ col.name }}</span>
+                                <span class="col-type">{{ col.type }}</span>
+                                {% if col.primary_key %}
+                                <i class="fa-solid fa-key pk-icon" title="Primary Key"></i>
+                                {% endif %}
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <!-- Top Header -->
+            <header class="main-header">
+                <div class="header-left">
+                    <div class="brand-logo-container">
+                        <i class="fa-solid fa-wand-magic-sparkles brand-logo-icon"></i>
+                        <div class="brand-title-group">
+                            <h1>Query Optimizer Simulator</h1>
+                            <span class="brand-subtitle">ADBMS Educational Dashboard</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="header-right">
+                    <div class="live-indicator">
+                        <span class="pulse-dot"></span>
+                        <span class="indicator-label">Optimizer Core Online</span>
+                    </div>
+                    <button class="btn btn-secondary" id="btnReset"><i class="fa-solid fa-arrow-rotate-left"></i> Reset</button>
+                </div>
+            </header>
+
+            <!-- Hero Section -->
+            <section class="hero-section">
+                <div class="hero-content">
+                    <h2>Educational Query Optimization Engine</h2>
+                    <p>Analyze, rewrite, and compare relational algebra logical rules and cost-based physical plans in real time.</p>
+                </div>
+                <div class="hero-stats-grid">
+                    <div class="hero-stat-card">
+                        <div class="stat-icon"><i class="fa-solid fa-table"></i></div>
+                        <div class="stat-meta">
+                            <span class="stat-value">4</span>
+                            <span class="stat-label">Tables</span>
+                        </div>
+                    </div>
+                    <div class="hero-stat-card">
+                        <div class="stat-icon"><i class="fa-solid fa-server"></i></div>
+                        <div class="stat-meta">
+                            <span class="stat-value" id="heroStatRecords">5,310</span>
+                            <span class="stat-label">Records</span>
+                        </div>
+                    </div>
+                    <div class="hero-stat-card">
+                        <div class="stat-icon"><i class="fa-solid fa-network-wired"></i></div>
+                        <div class="stat-meta">
+                            <span class="stat-value">3</span>
+                            <span class="stat-label">Physical Plans</span>
+                        </div>
+                    </div>
+                    <div class="hero-stat-card">
+                        <div class="stat-icon"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
+                        <div class="stat-meta">
+                            <span class="stat-value">3</span>
+                            <span class="stat-label">Logical Rules</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SQL Workspace -->
+            <section class="workspace">
+                <div class="card editor-card">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <i class="fa-solid fa-code text-primary"></i>
+                            <span>SQL Query Editor</span>
+                        </div>
+                        <div class="editor-shortcuts">
+                            <span class="shortcut-tip"><kbd>Ctrl</kbd> + <kbd>Enter</kbd> to execute</span>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <textarea id="sqlEditor" spellcheck="false" placeholder="Enter your SELECT query here..."></textarea>
+                    </div>
+                    <div class="card-footer">
+                        <div class="quick-queries">
+                            <span class="label">Quick Templates:</span>
+                            <button class="btn-template" data-sql="SELECT name, cgpa FROM Student WHERE cgpa > 3.8">Simple Select</button>
+                            <button class="btn-template" data-sql="SELECT Student.name, Department.name FROM Student JOIN Department ON Student.dept_id = Department.id WHERE Student.cgpa > 3.5">Join & Filter</button>
+                            <button class="btn-template" data-sql="SELECT Teacher.name, Course.name FROM Teacher JOIN Course ON Course.teacher_id = Teacher.id">Teacher Courses</button>
+                        </div>
+                        <button class="btn btn-primary" id="btnExecute">
+                            <i class="fa-solid fa-play"></i>
+                            <span>Execute & Optimize</span>
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Metrics Panel -->
+            <section class="metrics-section hidden" id="metricsPanel">
+                <div class="metric-card">
+                    <div class="metric-icon cost-icon">
+                        <i class="fa-solid fa-bolt"></i>
+                    </div>
+                    <div class="metric-details">
+                        <span class="metric-label">Estimated I/O & CPU Cost</span>
+                        <span class="metric-value" id="valEstimatedCost">-</span>
+                    </div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-icon rows-icon">
+                        <i class="fa-solid fa-list-ol"></i>
+                    </div>
+                    <div class="metric-details">
+                        <span class="metric-label">Estimated Output Rows</span>
+                        <span class="metric-value" id="valEstimatedRows">-</span>
+                    </div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-icon time-icon">
+                        <i class="fa-solid fa-stopwatch"></i>
+                    </div>
+                    <div class="metric-details">
+                        <span class="metric-label">Actual Exec Time (SQLite)</span>
+                        <span class="metric-value" id="valActualTime">-</span>
+                    </div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-icon db-rows-icon">
+                        <i class="fa-solid fa-database"></i>
+                    </div>
+                    <div class="metric-details">
+                        <span class="metric-label">Actual Rows Returned</span>
+                        <span class="metric-value" id="valActualRows">-</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Optimizer Analytics Dashboard (Cost Analysis & Best Plan) -->
+            <section class="optimizer-section hidden" id="optimizerSection">
+                <div class="optimizer-grid">
+                    <!-- Cost Analysis Panel -->
+                    <div class="card cost-analysis-card">
+                        <div class="card-header">
+                            <div class="card-title">
+                                <i class="fa-solid fa-calculator text-primary"></i>
+                                <span>Cost Analysis Comparison</span>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="comparison-table-container">
+                                <table class="comparison-table" id="comparisonTable">
+                                    <thead>
+                                        <tr>
+                                            <th>Plan Name</th>
+                                            <th>Scan Type</th>
+                                            <th>Join Type</th>
+                                            <th>CPU Cost</th>
+                                            <th>I/O Cost</th>
+                                            <th>Total Cost</th>
+                                            <th>Est. Rows</th>
+                                            <th>Rank</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <!-- Populated dynamically -->
+                                    </tbody>
+                                </table>
+                            </div>
+                            <!-- Simple Charts Visualization -->
+                            <div class="charts-container">
+                                <h5><i class="fa-solid fa-chart-simple"></i> Plan Cost Comparison</h5>
+                                <div class="chart-bars-list" id="chartBarsList">
+                                    <!-- Populated dynamically as pure CSS/HTML progress bars -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Best Plan Panel -->
+                    <div class="card best-plan-card">
+                        <div class="card-header">
+                            <div class="card-title">
+                                <i class="fa-solid fa-trophy text-warning"></i>
+                                <span>Optimal Execution Plan</span>
+                            </div>
+                        </div>
+                        <div class="card-body best-plan-details">
+                            <div class="best-plan-header">
+                                <div class="selected-badge"><i class="fa-solid fa-circle-check"></i> SELECTED PLAN</div>
+                                <h3 id="bestPlanName">-</h3>
+                            </div>
+                            <div class="best-plan-info-list">
+                                <div class="info-item">
+                                    <span class="info-label">Total Estimated Cost:</span>
+                                    <span class="info-value text-accent" id="bestPlanCost">-</span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="info-label">Join Algorithm:</span>
+                                    <span class="info-value" id="bestPlanJoin">-</span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="info-label">Scan Strategy:</span>
+                                    <span class="info-value" id="bestPlanScan">-</span>
+                                </div>
+                            </div>
+                            <div class="best-plan-explanation">
+                                <h5>Optimizer Selection Rationale:</h5>
+                                <p id="bestPlanWhy">-</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Output Explorer -->
+            <section class="output-section">
+                <div class="card output-card">
+                    <div class="tabs-header">
+                        <button class="tab-btn active" data-tab="tab-results">
+                            <i class="fa-solid fa-table"></i> Results Grid
+                        </button>
+                        <button class="tab-btn" data-tab="tab-comparison">
+                            <i class="fa-solid fa-code-compare"></i> Optimizer Comparison
+                        </button>
+                        <button class="tab-btn" data-tab="tab-physical">
+                            <i class="fa-solid fa-route"></i> Physical Plans
+                        </button>
+                        <button class="tab-btn" data-tab="tab-logical">
+                            <i class="fa-solid fa-network-wired"></i> Algebra Tree
+                        </button>
+                        <button class="tab-btn" data-tab="tab-parsed">
+                            <i class="fa-solid fa-code-branch"></i> Parsed AST
+                        </button>
+                        <button class="tab-btn" data-tab="tab-history">
+                            <i class="fa-solid fa-history"></i> History
+                        </button>
+                        <button class="tab-btn" data-tab="tab-statistics">
+                            <i class="fa-solid fa-chart-pie"></i> DB Stats
+                        </button>
+                        <button class="tab-btn" data-tab="tab-help">
+                            <i class="fa-solid fa-circle-question"></i> Help Guide
+                        </button>
+                    </div>
+                    
+                    <div class="tab-content active" id="tab-results">
+                        <div class="placeholder-state" id="resultsPlaceholder">
+                            <i class="fa-solid fa-table-list"></i>
+                            <p>Execute a query to view results and comparison plans</p>
+                        </div>
+                        <div class="results-table-container hidden" id="resultsContainer">
+                            <table class="results-table" id="resultsTable">
+                                <thead>
+                                    <!-- Dynamic headers -->
+                                </thead>
+                                <tbody>
+                                    <!-- Dynamic rows -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <div class="tab-content" id="tab-physical">
+                        <div class="placeholder-state" id="physicalPlaceholder">
+                            <i class="fa-solid fa-route"></i>
+                            <p>Execute a query to generate physical execution plans</p>
+                        </div>
+                        <div class="plan-visualizer hidden" id="physicalContainer">
+                            <div class="plan-legend">
+                                <span class="legend-item"><i class="fa-solid fa-arrows-spin text-accent"></i> Join Operators</span>
+                                <span class="legend-item"><i class="fa-solid fa-filter text-warning"></i> Filter Operators</span>
+                                <span class="legend-item"><i class="fa-solid fa-magnifying-glass text-info"></i> Scan/Relation Operators</span>
+                            </div>
+                            <div class="physical-plans-grid">
+                                <div class="physical-plan-column">
+                                    <div class="plan-header">
+                                        <h4>Plan A</h4>
+                                        <p class="plan-desc">Sequential Scan + Nested Loop Join</p>
+                                    </div>
+                                    <div class="plan-tree-render" id="physicalTreeRenderA"></div>
+                                </div>
+                                <div class="physical-plan-column">
+                                    <div class="plan-header">
+                                        <h4>Plan B</h4>
+                                        <p class="plan-desc">Index Scan (simulated) + Hash Join</p>
+                                    </div>
+                                    <div class="plan-tree-render" id="physicalTreeRenderB"></div>
+                                </div>
+                                <div class="physical-plan-column">
+                                    <div class="plan-header">
+                                        <h4>Plan C</h4>
+                                        <p class="plan-desc">Index Scan (simulated) + Sort Merge Join</p>
+                                    </div>
+                                    <div class="plan-tree-render" id="physicalTreeRenderC"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="tab-content" id="tab-logical">
+                        <div class="placeholder-state" id="logicalPlaceholder">
+                            <i class="fa-solid fa-share-nodes"></i>
+                            <p>Execute a query to inspect Relational Algebra trees</p>
+                        </div>
+                        <div class="logical-plans-container hidden" id="logicalContainer">
+                            <div class="plan-columns">
+                                <div class="plan-column">
+                                    <h4>Initial Logical Plan</h4>
+                                    <div class="tree-code" id="logicalTreeRender"></div>
+                                </div>
+                                <div class="plan-column">
+                                    <h4>Optimized Logical Plan</h4>
+                                    <div class="tree-code" id="optimizedTreeRender"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="tab-content" id="tab-parsed">
+                        <div class="placeholder-state" id="parsedPlaceholder">
+                            <i class="fa-solid fa-code-branch"></i>
+                            <p>Execute a query to view its parsed components AST</p>
+                        </div>
+                        <div class="parsed-container hidden" id="parsedContainer">
+                            <h4>SQL AST Components</h4>
+                            <pre class="tree-code" id="parsedTreeRender"></pre>
+                        </div>
+                    </div>
+                    
+                    <!-- New comparison tab panel -->
+                    <div class="tab-content" id="tab-comparison">
+                        <div class="placeholder-state" id="comparisonPlaceholder">
+                            <i class="fa-solid fa-code-compare"></i>
+                            <p>Execute a query to view optimizer comparison analytics</p>
+                        </div>
+                        <div class="comparison-container hidden" id="comparisonContainer">
+                            <div class="comparison-summary-card">
+                                <div class="reduction-circle">
+                                    <span class="pct-val" id="reductionPctVal">0%</span>
+                                    <span class="pct-lbl">Cost Saved</span>
+                                </div>
+                                <div class="explanation-box">
+                                    <h4><i class="fa-solid fa-brain text-accent"></i> Optimization Explanation Log</h4>
+                                    <ul class="explanation-list" id="comparisonExplanations">
+                                        <!-- Explanations will be populated here -->
+                                    </ul>
+                                </div>
+                            </div>
+                            
+                            <div class="plan-columns">
+                                <div class="plan-column">
+                                    <div class="column-header-plan" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+                                        <h4>Logical Tree (Unoptimized)</h4>
+                                        <span class="badge" id="compCostBefore" style="background-color: var(--color-danger); color: #fff; padding: 4px 10px; border-radius: 6px;">Cost: -</span>
+                                    </div>
+                                    <div class="tree-code" id="compLogicalBefore"></div>
+                                </div>
+                                <div class="plan-column">
+                                    <div class="column-header-plan" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+                                        <h4>Logical Tree (Optimized)</h4>
+                                        <span class="badge" id="compCostAfter" style="background-color: var(--color-secondary); color: #fff; padding: 4px 10px; border-radius: 6px;">Cost: -</span>
+                                    </div>
+                                    <div class="tree-code" id="compLogicalAfter"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- New history tab panel -->
+                    <div class="tab-content" id="tab-history">
+                        <div class="history-container" id="historyContainer">
+                            <h4>Session Query History</h4>
+                            <div class="history-list" id="historyList" style="display: flex; flex-direction: column; gap: 12px; margin-top: 16px;">
+                                <!-- Populated dynamically -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- New statistics tab panel -->
+                    <div class="tab-content" id="tab-statistics">
+                        <div class="statistics-dashboard" style="display: flex; flex-direction: column; gap: 20px;">
+                            <div class="stats-overview-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
+                                <div class="stat-box">
+                                    <div class="stat-lbl">Total Tables</div>
+                                    <div class="stat-val">4</div>
+                                </div>
+                                <div class="stat-box">
+                                    <div class="stat-lbl">Total Seeded Records</div>
+                                    <div class="stat-val" id="statsTotalRecords">5,310</div>
+                                </div>
+                                <div class="stat-box">
+                                    <div class="stat-lbl">Simulated Indexes</div>
+                                    <div class="stat-val" style="color: var(--color-warning);">4 Primary Keys</div>
+                                </div>
+                            </div>
+                            
+                            <div class="card table-card">
+                                <div class="card-header">
+                                    <div class="card-title">
+                                        <i class="fa-solid fa-database text-primary"></i>
+                                        <span>Schema Metrics Explorer</span>
+                                    </div>
+                                </div>
+                                <table class="results-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Table Name</th>
+                                            <th>Total Records</th>
+                                            <th>Indexed Columns</th>
+                                            <th>Attributes & Schema</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td><strong>Student</strong></td>
+                                            <td id="statsRowsStudent">-</td>
+                                            <td><span class="badge" style="background-color: var(--color-warning); color: #000; font-weight: 600;">id</span></td>
+                                            <td>id (INT), name (TEXT), dept_id (INT), cgpa (REAL)</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Department</strong></td>
+                                            <td id="statsRowsDepartment">-</td>
+                                            <td><span class="badge" style="background-color: var(--color-warning); color: #000; font-weight: 600;">id</span></td>
+                                            <td>id (INT), name (TEXT)</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Teacher</strong></td>
+                                            <td id="statsRowsTeacher">-</td>
+                                            <td><span class="badge" style="background-color: var(--color-warning); color: #000; font-weight: 600;">id</span></td>
+                                            <td>id (INT), name (TEXT), dept_id (INT)</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Course</strong></td>
+                                            <td id="statsRowsCourse">-</td>
+                                            <td><span class="badge" style="background-color: var(--color-warning); color: #000; font-weight: 600;">id</span></td>
+                                            <td>id (INT), name (TEXT), teacher_id (INT)</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- New help tab panel -->
+                    <div class="tab-content" id="tab-help">
+                        <div class="help-guide-container" style="display: flex; flex-direction: column; gap: 20px;">
+                            <div style="border-bottom: 1px solid var(--border-color); padding-bottom: 12px;">
+                                <h3>🎓 Query Optimization Educational Guide</h3>
+                                <p class="help-intro" style="color: var(--text-secondary); font-size: 0.9rem; margin-top: 4px;">This guide explains the foundational relational database optimizer concepts simulated in this application.</p>
+                            </div>
+                            
+                            <div class="help-section-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px;">
+                                <div class="card help-card">
+                                    <h4 style="font-family: var(--font-heading); color: var(--color-info); margin-bottom: 10px;"><i class="fa-solid fa-magnifying-glass"></i> Access Paths (Scans)</h4>
+                                    <ul style="list-style: none; display: flex; flex-direction: column; gap: 10px; font-size: 0.8rem; color: var(--text-secondary);">
+                                        <li><strong>Sequential Scan (Seq Scan)</strong>: Reads the entire table from beginning to end. Highly efficient for small tables but has linear time complexity O(N) for large tables.</li>
+                                        <li><strong>Index Scan</strong>: Uses a B-Tree or Hash Index to jump directly to target records. Simulated here for primary key <code>id</code>. Features logarithmic time complexity O(log N).</li>
+                                    </ul>
+                                </div>
+                                
+                                <div class="card help-card">
+                                    <h4 style="font-family: var(--font-heading); color: var(--color-accent); margin-bottom: 10px;"><i class="fa-solid fa-arrows-spin"></i> Join Algorithms</h4>
+                                    <ul style="list-style: none; display: flex; flex-direction: column; gap: 10px; font-size: 0.8rem; color: var(--text-secondary);">
+                                        <li><strong>Nested Loop Join</strong>: For each row in outer table, scans inner table. Cost is O(M * N). Good for small tables or when inner table has indexes.</li>
+                                        <li><strong>Hash Join</strong>: Builds an in-memory hash map of the smaller table, then probes it with the larger table. Linear complexity O(M + N). Very efficient for large unsorted sets.</li>
+                                        <li><strong>Sort Merge Join</strong>: Sorts both relations by join keys, then merges them in a single pass. Cost is O(M log M + N log N). Excellent when inputs are already sorted.</li>
+                                    </ul>
+                                </div>
+                                
+                                <div class="card help-card">
+                                    <h4 style="font-family: var(--font-heading); color: var(--color-warning); margin-bottom: 10px;"><i class="fa-solid fa-filter"></i> Logical Rewrite Rules</h4>
+                                    <ul style="list-style: none; display: flex; flex-direction: column; gap: 10px; font-size: 0.8rem; color: var(--text-secondary);">
+                                        <li><strong>Selection Pushdown</strong>: Moves <code>WHERE</code> filters down past joins, applying them immediately at table scans. Reduces intermediate relation sizes early, avoiding expensive Cartesian products.</li>
+                                        <li><strong>Projection Pushdown</strong>: Restricts column fetching to only referenced columns. Minimizes memory and I/O bus usage.</li>
+                                        <li><strong>Join Reordering</strong>: Calculates alternative join orders (e.g. joining small tables first) to reduce the rows fed into subsequent join operators.</li>
+                                    </ul>
+                                </div>
+                                
+                                <div class="card help-card">
+                                    <h4 style="font-family: var(--font-heading); color: var(--color-primary); margin-bottom: 10px;"><i class="fa-solid fa-calculator"></i> Cost-Based Optimization</h4>
+                                    <ul style="list-style: none; display: flex; flex-direction: column; gap: 10px; font-size: 0.8rem; color: var(--text-secondary);">
+                                        <li>DBMS query optimizer evaluates physical plan candidates using statistics (row counts, selectivity).</li>
+                                        <li>Selects the cheapest plan using cost formulas (disk I/O page reads + CPU execution cycles).</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Error Toast Notification -->
+    <div id="errorToast" class="toast hidden">
+        <div class="toast-content">
+            <i class="fa-solid fa-circle-exclamation toast-icon"></i>
+            <div class="toast-message">
+                <span class="toast-title">Query Execution Failed</span>
+                <span class="toast-desc" id="toastMessage">Check syntax or schemas.</span>
+            </div>
+        </div>
+        <button class="toast-close" id="btnToastClose">&times;</button>
+    </div>
+    
+    <!-- Script -->
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
